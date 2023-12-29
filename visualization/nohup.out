@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "/gpfs/fs1/home/dvelozad/projects/md_lennard_jones/visualization/generate_video_3d.py", line 13, in <module>
+    data = pd.read_csv(f'../output_files/{label}_positions_data.txt', sep=' ', names=['particle', 'time', 'x', 'y', 'z'])
+  File "/home/dvelozad/miniforge3/lib/python3.10/site-packages/pandas/io/parsers/readers.py", line 948, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "/home/dvelozad/miniforge3/lib/python3.10/site-packages/pandas/io/parsers/readers.py", line 611, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "/home/dvelozad/miniforge3/lib/python3.10/site-packages/pandas/io/parsers/readers.py", line 1448, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "/home/dvelozad/miniforge3/lib/python3.10/site-packages/pandas/io/parsers/readers.py", line 1705, in _make_engine
+    self.handles = get_handle(
+  File "/home/dvelozad/miniforge3/lib/python3.10/site-packages/pandas/io/common.py", line 863, in get_handle
+    handle = open(
+FileNotFoundError: [Errno 2] No such file or directory: '../output_files/T0.8N5_RHO0.8_positions_data.txt'
+Traceback (most recent call last):
+  File "/gpfs/fs1/home/dvelozad/projects/md_lennard_jones/visualization/generate_video_3d.py", line 13, in <module>
+    data = pd.read_csv(f'../output_files/{label}_positions_data.txt', sep=' ', names=['particle', 'time', 'x', 'y', 'z'])
+  File "/home/dvelozad/miniforge3/lib/python3.10/site-packages/pandas/io/parsers/readers.py", line 948, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "/home/dvelozad/miniforge3/lib/python3.10/site-packages/pandas/io/parsers/readers.py", line 611, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "/home/dvelozad/miniforge3/lib/python3.10/site-packages/pandas/io/parsers/readers.py", line 1448, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "/home/dvelozad/miniforge3/lib/python3.10/site-packages/pandas/io/parsers/readers.py", line 1705, in _make_engine
+    self.handles = get_handle(
+  File "/home/dvelozad/miniforge3/lib/python3.10/site-packages/pandas/io/common.py", line 863, in get_handle
+    handle = open(
+FileNotFoundError: [Errno 2] No such file or directory: '../output_files/T0.8N6_RHO1_positions_data.txt'
