@@ -14,7 +14,6 @@
 #include "Constants.h"
 
 
-
 using namespace std;
 
 
@@ -42,7 +41,6 @@ __global__ void updateVelocitiesKernel(Particle* particles, int N, double dt) {
         particles[idx].Move_V(dt);
     }
 }
-
 
 __global__ void applyLangevinThermostat(Particle* particles, int N, double dt, double gamma, double temperature, curandState* states) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -103,7 +101,7 @@ int main() {
     }
 
     // To save energies
-    std::string energyFilename = "../output_files/" + simulationLabel + "_energy_data.txt";
+    std::string energyFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_energy_data.txt";
     std::ofstream outFile_energy(energyFilename);
     if (!outFile_energy) {
         cerr << "Error opening file for writing" << endl;
@@ -111,7 +109,7 @@ int main() {
     }
 
     // To save energies
-    std::string temperatureFilename = "../output_files/" + simulationLabel + "_temperature_data.txt";
+    std::string temperatureFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_temperature_data.txt";
     std::ofstream outFile_temperature(temperatureFilename);
     if (!outFile_temperature) {
         cerr << "Error opening file for writing" << endl;
@@ -119,7 +117,7 @@ int main() {
     }
 
     // To save positions
-    std::string positionsFilename = "../output_files/" + simulationLabel + "_positions_data.txt";
+    std::string positionsFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_positions_data.txt";
     std::ofstream outFile_positions(positionsFilename);
     if (!outFile_positions) {
         cerr << "Error opening file for writing" << endl;
@@ -127,7 +125,7 @@ int main() {
     }
 
     // To save positions
-    std::string velocitiesFilename = "../output_files/" + simulationLabel + "_velocities_data.txt";
+    std::string velocitiesFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_velocities_data.txt";
     std::ofstream outFile_velocities(velocitiesFilename);
     if (!outFile_velocities) {
         cerr << "Error opening file for writing" << endl;
@@ -135,7 +133,7 @@ int main() {
     }
 
     // To save RDF
-    std::string outFile_RDF = "../output_files/" + simulationLabel + "rdf_results.txt";
+    std::string outFile_RDF = "../output_files/" + simulationLabel + '/' + simulationLabel + "rdf_results.txt";
 
     // Intit collider
     collider.Init();
@@ -203,11 +201,11 @@ int main() {
     cudaMemcpy(dev_particles, particles, N * sizeof(Particle), cudaMemcpyHostToDevice);
 
 
-    // Setup CUDA kernel configuration
-    int blockSize = 256; // Example block size, can be tuned for your GPU
+    // kernel config
+    int blockSize = 256; 
     int numBlocks = (N + blockSize - 1) / blockSize;
 
-    // Random states
+    // random states
     curandState* devStates;
     cudaMalloc(&devStates, N * sizeof(curandState));
     setupRandomStates<<<numBlocks, blockSize>>>(devStates, 12472547);
@@ -216,7 +214,7 @@ int main() {
     for (time = drawTime = 0; time < totalTime; time += dt, drawTime += dt) {
 
         // Write info
-        if (int(drawTime) % timeFrame == 0 && drawTime - int(drawTime) < dt)  {
+        if (int(time / timeFrame) != int((time - dt) / timeFrame)) {
 
             // Copy data back to host if needed
             cudaMemcpy(particles, dev_particles, N * sizeof(Particle), cudaMemcpyDeviceToHost);
@@ -248,25 +246,23 @@ int main() {
 
         }  
 
-        // Call CUDA kernels to update particle velocities and positions
+        // call kernels to update particle velocities and positions
         updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt * 0.5);
         applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
 
         moveParticlesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt);
 
 
-        // Calculate forces (you'll need a CUDA version of this)
+        // calcu forces
         collider.CalculateForces(dev_particles, dev_partialPotentialEnergy, N);
 
-        // Final half-step velocity update
+        // half-step velocity update
         updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt * 0.5);
         applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
     }
 
-    // Copy data back to host if needed
-    cudaMemcpy(particles, dev_particles, N * sizeof(Particle), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(particles, dev_particles, N * sizeof(Particle), cudaMemcpyDeviceToHost);
 
-    // Free GPU resources
     cudaFree(dev_particles);
 
     return 0;

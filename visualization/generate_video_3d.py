@@ -7,7 +7,7 @@ import matplotlib.animation as animation
 from matplotlib.patches import Circle
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-label = 'T0.71_N5_RHO0.844'
+label = 'T0.71_N7_RHO0.844'
 
 # Load data for particles, energy, and temperature
 data = pd.read_csv(f'../output_files/{label}_positions_data.txt', sep=' ', names=['particle', 'time', 'x', 'y', 'z'])

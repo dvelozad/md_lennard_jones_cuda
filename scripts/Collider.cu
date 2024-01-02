@@ -53,19 +53,19 @@ __global__ void calculateForcesCUDA(Particle* particles, double* partialPotentia
 void Collider::CalculateForces(Particle* dev_particles, double* dev_partialPotentialEnergy, int N) {
     //std::cout << "Epsilon: " << N << std::endl;
 
-    // Define grid and block sizes
+    // grid and block sizes
     int blockSize = 256; 
     int numBlocks = (N + blockSize - 1) / blockSize;
 
-    // Launch CUDA kernel
+    // CUDA kernel launch
     calculateForcesCUDA<<<numBlocks, blockSize>>>(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz, epsilon, sigma, cutoff);
 
-    // Check for any errors in kernel launch or execution
+    // errors
     cudaError_t error = cudaGetLastError();
     if (error != cudaSuccess) {
         std::cerr << "CUDA error: " << cudaGetErrorString(error) << std::endl;
     }
 
-    // Synchronize device
+    // synchronize device
     cudaDeviceSynchronize();
 }

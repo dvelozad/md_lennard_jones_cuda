@@ -15,7 +15,7 @@
 #endif
 
 #ifndef RHO_
-#define RHO_ 0.844
+#define RHO_ 0.05
 #endif
 
 // Simulation label
@@ -60,7 +60,7 @@ const double Lx = L, Ly = L, Lz = L;
 
 // Write definitions
 const double dt = 0.005;
-const int timeFrame = 5;
+const double timeFrame = 0.01;
 const double totalTime = 2000;
 
 // Steepest Descent Energy Minimization

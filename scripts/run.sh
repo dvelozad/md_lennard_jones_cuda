@@ -4,6 +4,15 @@ temperature=$1
 N_=$2
 RHO_=$3
 
+# label
+simulationLabel="T${temperature}_N${N_}_RHO${RHO_}"
+
+# Define the directory path
+outputDir="../output_files/${simulationLabel}"
+
+# Create the directory if it doesn't exist
+mkdir -p "${outputDir}"
+
 # Compile CUDA source files with nvcc
 nvcc -c Particle.cu
 nvcc -c Collider.cu
