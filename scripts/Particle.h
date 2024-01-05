@@ -29,6 +29,9 @@ public:
     double GetVelocityX(void);
     double GetVelocityY(void);
     double GetVelocityZ(void);
+    double GetForceX(void);
+    double GetForceY(void);
+    double GetForceZ(void);
     double GetNeighborList(void);
 
     __host__ __device__ void ApplyPeriodicBoundaryConditions(double Lx, double Ly, double Lz) {

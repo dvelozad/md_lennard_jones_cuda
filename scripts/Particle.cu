@@ -16,3 +16,6 @@ double Particle::GetVelocity(void) { return sqrt(velocityX * velocityX + velocit
 double Particle::GetVelocityX(void) { return velocityX; }
 double Particle::GetVelocityY(void) { return velocityY; }
 double Particle::GetVelocityZ(void) { return velocityZ; }
+double Particle::GetForceX(void) { return forceX; }
+double Particle::GetForceY(void) { return forceY; }
+double Particle::GetForceZ(void) { return forceZ; }

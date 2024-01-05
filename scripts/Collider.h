@@ -4,6 +4,8 @@
 
 #include "Particle.h"
 
+__device__ double epsilon_sigma_6_d, sigma_6_d, forceNormalCutOff_d;
+
 class Collider {
 private:
     double potentialEnergy;
