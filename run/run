@@ -1,0 +1,32 @@
+#! /bin/csh -f
+#
+# BOX      = BOXLENGTH
+# NPART    = NUMBER OF PARTICLES
+# NSTEP    = NUMBER OF TIMESTEPS
+# NINIT    = NUMBER OF INITIALIZATION STEPS
+# TEMP     = TEMPERATURE
+# DELTAT   = TIMESTEP FOR INTEGRATION
+
+set RHO    = 1
+set M  = 5
+set NumberOfSteps  = 50000
+set T_desired  = 1
+set Gamma   = 0.5
+set dt  = 0.005
+set equilibrationSteps = 1000
+
+set mass = 1
+set vel = 10
+
+set cutoff = 2.5
+
+set label = 'T1_N5_RHO1'
+
+mkdir ../output_files/${label}
+
+cat > input <<endofdata
+$RHO    $M  $NumberOfSteps  $T_desired  $Gamma  $dt $equilibrationSteps $mass   $vel    $cutoff $label
+endofdata
+time ../scripts/simul.exe
+rm input
+exit
