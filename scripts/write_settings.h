@@ -1,25 +1,63 @@
 #include "Particle.h"
 
+#include <string>
+#include <fstream>
+
 // Write definitions
-const int RDF_writeFrame = 100;
-const int temperature_writeFrame = 500;
+extern int RDF_writeFrame;
 
-const int eqVerboseFrame = 100;
+extern int temperature_writeFrame;
 
-const int vacf_writeFrame = 1;
-const int maxVACFCount = 10;
-const int vacfSamplingReps = 10;
+extern int eqVerboseFrame;
 
-const int msd_writeFrame = 1;
-const int maxMSDCount = 10;
-const int msdSamplingReps = 10;
+extern int vacf_writeFrame;
+extern int maxVACFCount;
+extern int vacfSamplingReps;
+
+extern int msd_writeFrame;
+extern int maxMSDCount;
+extern int msdSamplingReps;
 
 // Radial distribution function definitions
-const double maxDistance = 10; 
-const int numBins = 1000; 
+extern float maxDistance;
+extern int numBins;
 
+float CalculateCurrentTemperature(Particle *particles, int numParticles);
+void ComputeMSD(Particle* particles, float* msd, int N, float time, int count, std::ofstream& outFile, bool shouldReset, bool shouldWrite);
+void ComputeVACF(Particle* particles, float* vacf, int N, float time, int count, std::ofstream& outFile, bool shouldReset, bool shouldWrite);
+void computeRDFCUDA(Particle* particles, int N, float Lx, float Ly, float Lz, float maxDistance, int numBins, float time, std::ofstream& outFile);
 
-double CalculateCurrentTemperature(Particle *particles, int numParticles);
-void ComputeMSD(Particle* particles, double* msd, int N, double time, int count, std::ofstream& outFile, bool shouldReset, bool shouldWrite);
-void ComputeVACF(Particle* particles, double* vacf, int N, double time, int count, std::ofstream& outFile, bool shouldReset, bool shouldWrite);
-void computeRDFCUDA(Particle* particles, int N, double Lx, double Ly, double Lz, double maxDistance, int numBins, double time, std::ofstream& outFile);
+class OutputManager {
+public:
+    void setOutputNames(const std::string& simulationLabel);
+    void openFiles();
+
+    // Accessors for ofstream objects
+    std::ofstream& getPosFile();
+    std::ofstream& getVelFile();
+    std::ofstream& getForcesFile();
+    std::ofstream& getRdfFile();
+    std::ofstream& getVafFile();
+    std::ofstream& getMsdFile();
+    std::ofstream& getTemperatureFile();
+
+private:
+    std::string rdfFilename;
+    std::string vafFilename;
+    std::string msdFilename;
+    std::string temperatureFilename;
+
+    std::string velocitiesFilename;
+    std::string forcesFilename;
+    std::string stressFilename;
+    std::string energyFilename;
+    std::string positionsFilename;
+
+    std::ofstream outFile_positions;
+    std::ofstream outFile_velocities;
+    std::ofstream outFile_forces;
+    std::ofstream outFile_rdf;
+    std::ofstream outFile_vacf;
+    std::ofstream outFile_msd;
+    std::ofstream outFile_temperature;
+};

@@ -5,8 +5,8 @@
 #include "Particle.h"
 #include "write_settings.h"
 
-void ComputeMSD(Particle* particles, double* msd, int N, double time, int count, std::ofstream& outFile, bool shouldReset, bool shouldWrite) {
-    static std::vector<std::array<double, 3>> initialPositions;
+void ComputeMSD(Particle* particles, float* msd, int N, float time, int count, std::ofstream& outFile, bool shouldReset, bool shouldWrite) {
+    static std::vector<std::array<float, 3>> initialPositions;
     static bool isInitialized = false;
 
     if (shouldReset || !isInitialized) {
@@ -20,10 +20,10 @@ void ComputeMSD(Particle* particles, double* msd, int N, double time, int count,
 
     // Compute MSD and add to existing data
     for (int i = 0; i < N; ++i) {
-        double dx = particles[i].GetX() - initialPositions[i][0];
-        double dy = particles[i].GetY() - initialPositions[i][1];
-        double dz = particles[i].GetZ() - initialPositions[i][2];
-        double displacementSquared = dx*dx + dy*dy + dz*dz;
+        float dx = particles[i].GetX() - initialPositions[i][0];
+        float dy = particles[i].GetY() - initialPositions[i][1];
+        float dz = particles[i].GetZ() - initialPositions[i][2];
+        float displacementSquared = dx*dx + dy*dy + dz*dz;
 
         msd[count % maxMSDCount] += displacementSquared / N; // Average over all particles
     }

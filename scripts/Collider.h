@@ -4,18 +4,16 @@
 
 #include "Particle.h"
 
-__device__ double epsilon_sigma_6_d, sigma_6_d, forceNormalCutOff_d;
-
 class Collider {
 private:
-    double potentialEnergy;
+    float potentialEnergy;
 
 public:
     void Init(void);
     //void CalculateForces(Particle *particles);
-    void CalculateForces(Particle* dev_particles, double* dev_partialPotentialEnergy, int N);
+    void CalculateForces(Particle* dev_particles, float* dev_partialPotentialEnergy, int N, float Lx, float Ly, float Lz);
     //void Collide(Particle &particle1, Particle &particle2);
-    double GetPotentialEnergy(void);
+    float GetPotentialEnergy(void);
 };
 
 #endif

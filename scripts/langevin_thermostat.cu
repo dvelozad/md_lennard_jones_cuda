@@ -11,27 +11,27 @@ __global__ void setupRandomStates(curandState* states, unsigned long seed) {
     curand_init(seed, idx, 0, &states[idx]);
 }
 
-double CalculateCurrentTemperature(Particle *particles, int numParticles) {
-    double totalKineticEnergy = 0.0;
+float CalculateCurrentTemperature(Particle *particles, int numParticles) {
+    float totalKineticEnergy = 0.0;
 
     for (int i = 0; i < numParticles; ++i) {
         totalKineticEnergy += particles[i].GetKineticEnergy();
     }
 
-    double temperature = (2.0 / (3.0 * numParticles * kB)) * totalKineticEnergy;
+    float temperature = (2.0 / (3.0 * numParticles * kB)) * totalKineticEnergy;
     return temperature;
 }
 
-__global__ void applyLangevinThermostat(Particle* particles, int N, double dt, double gamma, double temperature, curandState* states) {
+__global__ void applyLangevinThermostat(Particle* particles, int N, float dt, float gamma, float temperature, curandState* states) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < N) {
         // Generate a normally distributed random number
-        double randX = curand_normal_double(&states[idx]);
-        double randY = curand_normal_double(&states[idx]);
-        double randZ = curand_normal_double(&states[idx]);
+        float randX = curand_normal_double(&states[idx]);
+        float randY = curand_normal_double(&states[idx]);
+        float randZ = curand_normal_double(&states[idx]);
 
         // Calculate the random force magnitude
-        double randomForceMagnitude = sqrt(2.0 * particles[idx].mass * kB_d * temperature * gamma * dt);
+        float randomForceMagnitude = sqrt(2.0 * particles[idx].mass * kB_d * temperature * gamma * dt);
 
         // Update velocity
         particles[idx].velocityX += (particles[idx].forceX / particles[idx].mass - gamma * particles[idx].velocityX) * dt 

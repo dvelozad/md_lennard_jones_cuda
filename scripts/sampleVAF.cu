@@ -6,10 +6,10 @@
 #include "system.h"
 #include "write_settings.h"
 
-void ComputeVACF(Particle* particles, double* vacf, int N, double time, int count, std::ofstream& outFile, bool shouldReset, bool shouldWrite) {
-    static std::vector<std::array<double, 3>> initialVelocities;
+void ComputeVACF(Particle* particles, float* vacf, int N, float time, int count, std::ofstream& outFile, bool shouldReset, bool shouldWrite) {
+    static std::vector<std::array<float, 3>> initialVelocities;
     static bool isInitialized = false;
-    double intialVelocityNormalization;
+    float intialVelocityNormalization;
 
     if (shouldReset || !isInitialized) {
         initialVelocities.clear();
@@ -22,7 +22,7 @@ void ComputeVACF(Particle* particles, double* vacf, int N, double time, int coun
     
     // Compute VACF and add to existing data
     for (int i = 0; i < N; ++i) {
-        double vacfContribution = initialVelocities[i][0] * particles[i].GetVelocityX()
+        float vacfContribution = initialVelocities[i][0] * particles[i].GetVelocityX()
                                 + initialVelocities[i][1] * particles[i].GetVelocityY()
                                 + initialVelocities[i][2] * particles[i].GetVelocityZ();
 

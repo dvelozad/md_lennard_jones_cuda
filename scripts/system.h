@@ -5,34 +5,34 @@
 extern std::string simulationLabel;
 
 // time step
-extern double dt;
+extern float dt;
 extern int equilibrationSteps;
-//const double totalTime = 10; //In reduced units
+//const float totalTime = 10; //In reduced units
 extern int NumberOfSteps;
 
 // Lennard-Jones
-extern double kB;
-extern double epsilon;
-extern double sigma;
-extern double cutoff;
-extern double Ecut;
-extern double buffer;
+extern float kB;
+extern float epsilon;
+extern float sigma;
+extern float cutoff;
+extern float Ecut;
+extern float buffer;
 
 // Thermostat
-extern double Gamma;
-extern double T_desired;
+extern float Gamma;
+extern float T_desired;
 
 // Particles definitions
-extern double defaultMass;
-extern double InitialVelocity;
+extern float defaultMass;
+extern float InitialVelocity;
 
 // Simul box settings
-extern double RHO;
+extern float RHO;
 extern int M;
 extern int N;
-extern double L;
-extern double Lx;
-extern double Ly;
-extern double Lz;
+extern float L;
+extern float Lx;
+extern float Ly;
+extern float Lz;
 
 void Readdat(void);

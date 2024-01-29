@@ -3,7 +3,6 @@
 #include <array>
 #include <cmath>
 #include <omp.h>
-#include <fstream>
 
 #include <curand_kernel.h>
 #include <cuda_runtime.h>
@@ -17,19 +16,53 @@
 #include "cuda_opt_constants.h"
 
 
-//__device__ double Lx_d, Ly_d, Lz_d;
+//__device__ float Lx_d, Ly_d, Lz_d;
 int main() {
-
     Readdat();
 
-    cudaMemcpyToSymbol(Lx_d, &L, sizeof(double));
-    cudaMemcpyToSymbol(Ly_d, &L, sizeof(double));
-    cudaMemcpyToSymbol(Lz_d, &L, sizeof(double));
+    OutputManager outputManager;
+    outputManager.setOutputNames(simulationLabel);
+    outputManager.openFiles();
 
-    cudaMemcpyToSymbol(kB_d, &kB, sizeof(double));
-    cudaMemcpyToSymbol(epsilon_sigma_6_d, &epsilon_sigma_6, sizeof(double));
-    cudaMemcpyToSymbol(sigma_6_d, &sigma_6, sizeof(double));
-    cudaMemcpyToSymbol(forceNormalCutOff_d, &forceNormalCutOff, sizeof(double));
+    std::ofstream& outFile_positions  = outputManager.getPosFile();
+    std::ofstream& outFile_velocities = outputManager.getVelFile();
+    std::ofstream& outFile_forces     = outputManager.getForcesFile();
+
+    std::ofstream& outFile_rdf  = outputManager.getRdfFile();
+    std::ofstream& outFile_vacf = outputManager.getVafFile();
+    std::ofstream& outFile_msd  = outputManager.getMsdFile();
+
+    std::ofstream& outFile_temperature = outputManager.getTemperatureFile();
+
+    cudaMemcpyToSymbol(kB_d, &kB, sizeof(float));
+    cudaMemcpyToSymbol(epsilon_sigma_6_d, &epsilon_sigma_6, sizeof(float));
+    cudaMemcpyToSymbol(sigma_6_d, &sigma_6, sizeof(float));
+    cudaMemcpyToSymbol(forceNormalCutOff_d, &forceNormalCutOff, sizeof(float));
+
+
+    cout << "dt : " << dt << endl;
+    cout << "equilibrationSteps : " << equilibrationSteps << endl;
+    cout << "NumberOfSteps : " << NumberOfSteps << endl;
+
+    cout << "kB : " << kB << endl;
+    cout << "epsilon : " << epsilon << endl;
+    cout << "sigma : " << sigma << endl;
+    cout << "cutoff : " << cutoff << endl;
+
+    cout << "Gamma : " << Gamma << endl;
+    cout << "T_desired : " << T_desired << endl;
+
+    cout << "defaultMass : " << defaultMass << endl;
+    cout << "InitialVelocity : " << InitialVelocity << endl;
+
+    cout << "RHO : " << RHO << endl;
+    cout << "L : " << L << endl;
+
+    cout << "sigma_6 : " << sigma_6 << endl;
+    cout << "forceNormalCutOff : " << forceNormalCutOff << endl;
+    cout << "epsilon_sigma_6 : " << epsilon_sigma_6 << endl;
+    cout << "potentialEnergy_cutoff : " << potentialEnergy_cutoff << endl;
+
 
     // Check for errors
     cudaError_t error = cudaGetLastError();
@@ -38,14 +71,10 @@ int main() {
         return 1;
     }
 
-    std::cout << "Simulation label : " + simulationLabel << endl;
-    std::cout << "Box dimension L : " << Lx << endl;
-    std::cout << "Number of particles : " << N << endl;
-
     Particle particles[N];
     Collider collider;
     Crandom randomGenerator(0);
-    double time, radius, kineticEnergy, potentialEnergy, T_current;
+    float time, radius, kineticEnergy, potentialEnergy, T_current;
     int i, drawTime, currentTimeStep;
 
 
@@ -54,98 +83,23 @@ int main() {
         return 1;
     }
 
-    // To save energies
-    std::string temperatureFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_temperature_data.txt";
-    std::ofstream outFile_temperature(temperatureFilename);
-    if (!outFile_temperature) {
-        std::cout << temperatureFilename << endl;
-        cerr << "Error opening file for writing" << endl;
-        return 1;
-    }
-
-    /*   
-    // To save energies
-    std::string energyFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_energy_data.txt";
-    std::ofstream outFile_energy(energyFilename);
-    if (!outFile_energy) {
-        cerr << "Error opening file for writing" << endl;
-        return 1;
-    }
-
-    // To save positions
-    std::string positionsFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_positions_data.txt";
-    std::ofstream outFile_positions(positionsFilename);
-    if (!outFile_positions) {
-        cerr << "Error opening file for writing" << endl;
-        return 1; 
-    }
-    */
-
-    // To save positions
-    std::string rdfFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_rdf_data.txt";
-    std::ofstream outFile_rdf(rdfFilename);
-    if (!outFile_rdf) {
-        cerr << "Error opening file for writing" << endl;
-        return 1; 
-    }
-
-    std::string vafFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_vaf_data.txt";
-    std::ofstream outFile_vacf(vafFilename);
-    if (!outFile_vacf) {
-        cerr << "Error opening file for writing" << endl;
-        return 1; 
-    }
-
-    std::string msdFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_msd_data.txt";
-    std::ofstream outFile_msd(msdFilename);
-    if (!outFile_msd) {
-        cerr << "Error opening file for writing" << endl;
-        return 1; 
-    }
-
-    /*    // To save positions
-    std::string velocitiesFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_velocities_data.txt";
-    std::ofstream outFile_velocities(velocitiesFilename);
-    if (!outFile_velocities) {
-        cerr << "Error opening file for writing" << endl;
-        return 1; 
-    }
-
-    // To save positions
-    std::string forcesFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_forces_data.txt";
-    std::ofstream outFile_forces(forcesFilename);
-    if (!outFile_forces) {
-        cerr << "Error opening file for writing" << endl;
-        return 1; 
-    }
-
-    // To save positions
-    std::string stressFilename = "../output_files/" + simulationLabel + '/' + simulationLabel + "_stress_tensor_data.txt";
-    std::ofstream outFile_stress(stressFilename);
-    if (!outFile_stress) {
-        cerr << "Error opening file for writing" << endl;
-        return 1; 
-    }*/
-
-    // To save RDF
-    std::string outFile_RDF = "../output_files/" + simulationLabel + '/' + simulationLabel + "rdf_results.txt";
 
     // Intit collider
     collider.Init();
 
     int unitCellsPerSide = std::cbrt(N / 4);
-    double a = Lx / unitCellsPerSide;
+    float a = Lx / unitCellsPerSide;
 
-    std::vector<std::array<double, 3>> velocities(N);
-    std::vector<std::array<double, 3>> positions(N); // Store initial positions
+    std::vector<std::array<float, 3>> velocities(N);
+    std::vector<std::array<float, 3>> positions(N); // Store initial positions
 
     // Assign random velocities and positions
-    double totalVx = 0, totalVy = 0, totalVz = 0;
+    float totalVx = 0, totalVy = 0, totalVz = 0;
     int particleIndex = 0;
     for (int ix = 0; ix < unitCellsPerSide; ix++) {
         for (int iy = 0; iy < unitCellsPerSide; iy++) {
             for (int iz = 0; iz < unitCellsPerSide; iz++) {
-                std::vector<std::array<double, 3>> unitCellPositions = {
+                std::vector<std::array<float, 3>> unitCellPositions = {
                     {ix * a, iy * a, iz * a},
                     {(ix + 0.5) * a, (iy + 0.5) * a, iz * a},
                     {ix * a, (iy + 0.5) * a, (iz + 0.5) * a},
@@ -154,13 +108,13 @@ int main() {
 
                 for (auto& pos : unitCellPositions) {
                     if (particleIndex < N) {
-                        double theta = 2 * M_PI * randomGenerator.r();
-                        double phi = acos(2 * randomGenerator.r() - 1);
-                        double randomInitialVelocity = randomGenerator.r() * InitialVelocity;
+                        float theta = 2 * M_PI * randomGenerator.r();
+                        float phi = acos(2 * randomGenerator.r() - 1);
+                        float randomInitialVelocity = randomGenerator.r() * InitialVelocity;
 
-                        double velocityX0 = randomInitialVelocity * sin(phi) * cos(theta);
-                        double velocityY0 = randomInitialVelocity * sin(phi) * sin(theta);
-                        double velocityZ0 = randomInitialVelocity * cos(phi);
+                        float velocityX0 = randomInitialVelocity * sin(phi) * cos(theta);
+                        float velocityY0 = randomInitialVelocity * sin(phi) * sin(theta);
+                        float velocityZ0 = randomInitialVelocity * cos(phi);
 
                         velocities[particleIndex] = {velocityX0, velocityY0, velocityZ0};
                         positions[particleIndex] = pos;
@@ -177,9 +131,9 @@ int main() {
     }
 
     // Adjust velocities to ensure zero average
-    double avgVx = totalVx / N;
-    double avgVy = totalVy / N;
-    double avgVz = totalVz / N;
+    float avgVx = totalVx / N;
+    float avgVy = totalVy / N;
+    float avgVz = totalVz / N;
 
     for (int i = 0; i < N; i++) {
         particles[i].Init(
@@ -190,11 +144,11 @@ int main() {
 
 
     Particle* dev_particles;
-    double* dev_partialPotentialEnergy;
+    float* dev_partialPotentialEnergy;
 
     
     cudaMalloc(&dev_particles, N * sizeof(Particle));
-    cudaMalloc(&dev_partialPotentialEnergy, N * sizeof(double));
+    cudaMalloc(&dev_partialPotentialEnergy, N * sizeof(float));
 
 
     cudaMemcpy(dev_particles, particles, N * sizeof(Particle), cudaMemcpyHostToDevice);
@@ -211,23 +165,23 @@ int main() {
 
 
     // Allocate memory on GPU
-    double* dev_stressTensor;
-    cudaMalloc(&dev_stressTensor, 9 * sizeof(double)); // 3x3 stress tensor
-    cudaMemset(dev_stressTensor, 0, 9 * sizeof(double));
+    float* dev_stressTensor;
+    cudaMalloc(&dev_stressTensor, 9 * sizeof(float)); // 3x3 stress tensor
+    cudaMemset(dev_stressTensor, 0, 9 * sizeof(float));
 
 
-    double boxVolume = L*L*L;
+    float boxVolume = L*L*L;
     //calculateStressTensorCUDA<<<numBlocks, blockSize>>>(dev_particles, dev_stressTensor, N, boxVolume);
 
     // Copy stress tensor back to host
-    double stressTensor[9];
-    //cudaMemcpy(stressTensor, dev_stressTensor, 9 * sizeof(double), cudaMemcpyDeviceToHost);
+    float stressTensor[9];
+    //cudaMemcpy(stressTensor, dev_stressTensor, 9 * sizeof(float), cudaMemcpyDeviceToHost);
 
 
     //////////////////////////////////////////////////////////////////////////////
     //// Equilibartion
     //////////////////////////////////////////////////////////////////////////////
-    collider.CalculateForces(dev_particles, dev_partialPotentialEnergy, N);
+    collider.CalculateForces(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz);
     for (int eqStep = 0; eqStep < equilibrationSteps; eqStep++) {
 
         if(eqStep % eqVerboseFrame == 0){
@@ -236,33 +190,33 @@ int main() {
 
         // call kernels to update particle velocities and positions
         updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt * 0.5);
-        applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
+        //applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
 
-        moveParticlesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt);
+        moveParticlesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt, Lx, Ly, Lz);
 
         // calcu forces
-        collider.CalculateForces(dev_particles, dev_partialPotentialEnergy, N);
+        collider.CalculateForces(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz);
 
         // half-step velocity update
         updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt * 0.5);
-        applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
+        //applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
     }
 
 
     cout << "-----------------------------------------------------" << endl;
 
 
-    std::vector<double> vacf(maxVACFCount, 0.0);
+    std::vector<float> vacf(maxVACFCount, 0.0);
     int vacfCount = 0;
     int vacfSamplingCount = 0;
 
-    std::vector<double> msd(maxMSDCount, 0.0);
+    std::vector<float> msd(maxMSDCount, 0.0);
     int msdCount = 0;
     int msdSamplingCount = 0;
     for (currentTimeStep = time = drawTime = 0; currentTimeStep < NumberOfSteps; time += dt, drawTime++) {
 
-        /* 
-        if (rawTime % timeFrame == 0){     
+
+/*        if (1){     
             cudaMemcpy(particles, dev_particles, N * sizeof(Particle), cudaMemcpyDeviceToHost);
 
             for (i = 0; i < N; i++){
@@ -270,8 +224,8 @@ int main() {
                 outFile_velocities << i << " " << time << " " << particles[i].GetVelocityX() << " " << particles[i].GetVelocityY() << " " << particles[i].GetVelocityZ() << endl;
                 outFile_forces << i << " " << time << " " << particles[i].GetForceX() << " " << particles[i].GetForceY() << " " << particles[i].GetForceZ() << endl;
             }
-        } 
-        */
+        } */
+
 
         if (drawTime % vacf_writeFrame == 0 && vacfSamplingCount < vacfSamplingReps) {
             bool shouldWrite = (vacfSamplingCount == vacfSamplingReps - 1 && (vacfCount % (maxVACFCount - 1)) == 0);
@@ -321,8 +275,8 @@ int main() {
         /* // Write info
         if (drawTime % timeFrame == 0) {
 
-            double* partialPotentialEnergy = new double[N];
-            cudaMemcpy(partialPotentialEnergy, dev_partialPotentialEnergy, N * sizeof(double), cudaMemcpyDeviceToHost);
+            float* partialPotentialEnergy = new float[N];
+            cudaMemcpy(partialPotentialEnergy, dev_partialPotentialEnergy, N * sizeof(float), cudaMemcpyDeviceToHost);
             potentialEnergy = 0;
             for (int i = 0; i < N; i++) {
                 potentialEnergy += partialPotentialEnergy[i];
@@ -345,25 +299,30 @@ int main() {
 
             // stress tensor cal
             //calculateStressTensorCUDA<<<numBlocks, blockSize>>>(dev_particles, dev_stressTensor, N, boxVolume);
-            //cudaMemcpy(stressTensor, dev_stressTensor, 9 * sizeof(double), cudaMemcpyDeviceToHost);
+            //cudaMemcpy(stressTensor, dev_stressTensor, 9 * sizeof(float), cudaMemcpyDeviceToHost);
             //outFile_stress << time << " " << stressTensor[0] << " " << stressTensor[1] << " " << stressTensor[2] << " " << stressTensor[3] << " " << stressTensor[4] << " " << stressTensor[5] << " " << stressTensor[6] << " " << stressTensor[7] << " " << stressTensor[8] << endl;
 
         }  */
 
         // call kernels to update particle velocities and positions
         updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt * 0.5);
-        applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
+        //applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
 
-        moveParticlesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt);
+        moveParticlesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt, Lx, Ly, Lz);
 
         // calcu forces
-        collider.CalculateForces(dev_particles, dev_partialPotentialEnergy, N);
+        collider.CalculateForces(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz);
 
         // half-step velocity update
         updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt * 0.5);
-        applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
+        //applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
     }
+
+
+
     //cudaMemcpy(particles, dev_particles, N * sizeof(Particle), cudaMemcpyDeviceToHost);
+
     cudaFree(dev_particles);
+
     return 0;
 }
