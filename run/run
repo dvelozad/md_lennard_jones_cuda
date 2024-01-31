@@ -8,22 +8,25 @@
 # DELTAT   = TIMESTEP FOR INTEGRATION
 
 set RHO     = 1
-set MBOX    = 4
+set MBOX    = 10
 set NSTEP   = 0
 set TEMP    = 0.1
 set DAMP    = 0.5
 set DELTAT  = 0.005
-set EQSTEPS = 100000
+set EQSTEPS = 10000
 set MASS    = 1
-set INIVEL  = 10
+set INIVEL  = 15
 set CUTOFF  = 2.5
+set ECUTOFF = 2.5
+set DPROP   = 1.0
+set SKIN    = 0
 set LABEL   = 'T1_N5_RHO1'
 
 # PRINT paramters
 set eqVerboseFrame          = 100;
 
 # TEMP paramters
-set temperature_writeFrame  = 200;
+set temperature_writeFrame  = 2000;
 
 # VACF parameters
 set vacf_writeFrame         = 1000;
@@ -36,15 +39,15 @@ set maxMSDCount             = 10;
 set msdSamplingReps         = 10;
 
 # RDF parameters
-set RDF_writeFrame          = 1000;
+set RDF_writeFrame          = 100;
 set maxDistance             = 10; 
 set numBins                 = 1000; 
 
 
-mkdir ../output_files/${label}
+mkdir ../output_files/${LABEL}
 
 cat > input << endofdata
-$RHO    $MBOX   $NSTEP  $TEMP  $DAMP  $DELTAT $EQSTEPS $MASS   $INIVEL    $CUTOFF $LABEL
+$RHO    $MBOX   $NSTEP  $TEMP  $DAMP  $DELTAT $EQSTEPS $MASS   $INIVEL    $CUTOFF   $ECUTOFF $DPROP $SKIN $LABEL
 endofdata
 
 cat > write_input << endofdata

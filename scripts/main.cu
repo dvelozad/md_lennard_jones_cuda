@@ -90,8 +90,8 @@ int main() {
     int unitCellsPerSide = std::cbrt(N / 4);
     float a = Lx / unitCellsPerSide;
 
-    std::vector<std::array<float, 3>> velocities(N);
-    std::vector<std::array<float, 3>> positions(N); // Store initial positions
+    std::vector<std::array<double, 3>> velocities(N);
+    std::vector<std::array<double, 3>> positions(N); // Store initial positions
 
     // Assign random velocities and positions
     float totalVx = 0, totalVy = 0, totalVz = 0;
@@ -99,7 +99,7 @@ int main() {
     for (int ix = 0; ix < unitCellsPerSide; ix++) {
         for (int iy = 0; iy < unitCellsPerSide; iy++) {
             for (int iz = 0; iz < unitCellsPerSide; iz++) {
-                std::vector<std::array<float, 3>> unitCellPositions = {
+                std::vector<std::array<double, 3>> unitCellPositions = {
                     {ix * a, iy * a, iz * a},
                     {(ix + 0.5) * a, (iy + 0.5) * a, iz * a},
                     {ix * a, (iy + 0.5) * a, (iz + 0.5) * a},
@@ -177,34 +177,136 @@ int main() {
     float stressTensor[9];
     //cudaMemcpy(stressTensor, dev_stressTensor, 9 * sizeof(float), cudaMemcpyDeviceToHost);
 
+    //////////////////////////////////////////////////////////////////////////////
+    //// Neighbor list
+    //////////////////////////////////////////////////////////////////////////////
+    float displacementThreshold = displacementProportion;
+
+    // Copy the result back to the host
+    float maxDisplacement;
+    float* dev_maxDisplacement;
+    cudaMalloc((void**)&dev_maxDisplacement, sizeof(float));
+
+    // Initialize maxDisplacement to 0
+    float zero = 0.0f;
+    cudaMemcpy(dev_maxDisplacement, &zero, sizeof(float), cudaMemcpyHostToDevice);
+
+
+    float interactionCutoff = cutoff; 
+
+    int numCellsX = static_cast<int>(floor(Lx / interactionCutoff));
+    int numCellsY = static_cast<int>(floor(Ly / interactionCutoff));
+    int numCellsZ = static_cast<int>(floor(Lz / interactionCutoff));
+
+    float cellSize = Lx / numCellsX;
+
+/*    int numCellsX = 3;
+    int numCellsY = 3;
+    int numCellsZ = 3;*/
+
+    
+    Cell* dev_cells;
+    int totalNumCells = numCellsX * numCellsY * numCellsZ;
+    Cell cells[totalNumCells];
+    cudaMalloc(&dev_cells, totalNumCells * sizeof(Cell));
+
 
     //////////////////////////////////////////////////////////////////////////////
     //// Equilibartion
     //////////////////////////////////////////////////////////////////////////////
+    assignParticlesToCells<<<numBlocks, blockSize>>>(dev_particles, dev_cells, N, cellSize, numCellsX, numCellsY, numCellsZ, Lx, Ly, Lz);
+    updateVerletListKernel<<<numBlocks, blockSize>>>(dev_particles, dev_cells, N, extendedCutoff, cellSize, numCellsX, numCellsY, numCellsZ, Lx, Ly, Lz);
+
+
+
+/*    cudaMemcpy(cells, dev_cells, totalNumCells * sizeof(Cell), cudaMemcpyDeviceToHost);
+    cout << " Cell dim : " << numCellsX << " " << numCellsY << " " << numCellsZ << " "<< endl;
+    cout << " Number of particles per cell : " << cells[0].numParticles << endl;
+    for(int mm = 0; mm < totalNumCells; mm++){
+        cout << mm << " ----------------------------" << endl;
+        for(int nn = 0; nn < MAX_PARTICLES_PER_CELL; nn++){
+            cout << cells[mm].particleIndices[nn] << " ";
+        }
+        cout << endl;
+    }
+*/
+
+
+
+    //updateVerletListKernel<<<numBlocks, blockSize>>>(dev_particles, N, extendedCutoff, Lx, Ly, Lz);
     collider.CalculateForces(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz);
     for (int eqStep = 0; eqStep < equilibrationSteps; eqStep++) {
-
         if(eqStep % eqVerboseFrame == 0){
             cout << "Equilibration step : " << eqStep << endl;
         }
 
-        // call kernels to update particle velocities and positions
-        updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt * 0.5);
-        //applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
+        // Update particle velocities (half-step)
+        updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5);
 
-        moveParticlesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt, Lx, Ly, Lz);
+        // Move particles and calculate displacements
+        moveParticlesKernel<<<numBlocks, blockSize>>>(dev_particles, N, dt, Lx, Ly, Lz, dev_maxDisplacement);
+        cudaMemcpy(&maxDisplacement, dev_maxDisplacement, sizeof(float), cudaMemcpyDeviceToHost);
 
-        // calcu forces
+        resetCells<<<numBlocks, blockSize>>>(dev_cells, totalNumCells);
+        cudaDeviceSynchronize();
+
+        // Assign particles to cells
+        assignParticlesToCells<<<numBlocks, blockSize>>>(dev_particles, dev_cells, N, cellSize, numCellsX, numCellsY, numCellsZ, Lx, Ly, Lz);
+
+        //cout << maxDisplacement << endl;
+
+        // Update the Verlet list if necessary
+        if (maxDisplacement > displacementThreshold) {
+            //cout << "-----------------------------------------------------" << endl;
+            updateVerletListKernel<<<numBlocks, blockSize>>>(dev_particles, dev_cells, N, extendedCutoff, cellSize, numCellsX, numCellsY, numCellsZ, Lx, Ly, Lz);
+            cudaMemset(dev_maxDisplacement, 0, sizeof(float)); // Reset maxDisplacement on the device
+            //maxDisplacement = 0 ;
+        }
+
+        // Calculate forces
         collider.CalculateForces(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz);
 
-        // half-step velocity update
-        updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt * 0.5);
+        // Update particle velocities (half-step)
+        updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5);
         //applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
+
+
     }
 
-
+/*
     cout << "-----------------------------------------------------" << endl;
 
+
+
+
+    cudaMemcpy(particles, dev_particles, N * sizeof(Particle), cudaMemcpyDeviceToHost);
+    for (i = 0; i < N; i++){
+        outFile_positions << i << " " << time << " " << particles[i].GetX() << " " << particles[i].GetY() << " " << particles[i].GetZ() << endl;
+        outFile_velocities << i << " " << time << " " << particles[i].GetVelocityX() << " " << particles[i].GetVelocityY() << " " << particles[i].GetVelocityZ() << endl;
+        outFile_forces << i << " " << time << " " << particles[i].GetForceX() << " " << particles[i].GetForceY() << " " << particles[i].GetForceZ() << endl;
+    }
+
+    cudaMemcpy(cells, dev_cells, totalNumCells * sizeof(Cell), cudaMemcpyDeviceToHost);
+    cout << " Cell dim : " << numCellsX << " " << numCellsY << " " << numCellsZ << " "<< endl;
+    cout << " Number of particles per cell : " << cells[0].numParticles << endl;
+    for(int mm = 0; mm < totalNumCells; mm++){
+        cout << mm << " ----------------------------" << endl;
+        for(int nn = 0; nn < MAX_PARTICLES_PER_CELL; nn++){
+            cout << cells[mm].particleIndices[nn] << " ";
+        }
+        cout << endl;
+    }
+*/
+
+/*    cudaMemcpy(particles, dev_particles, N * sizeof(Particle), cudaMemcpyDeviceToHost);
+    cout << " Number of neighbors : " << particles[0].numNeighbors << endl;
+    for(int mm = 0; mm < N; mm++){
+        cout << mm << "----------------------------" << endl;
+        for(int nn = 0; nn < MAX_NEIGHBORS; nn++){
+            cout << particles[mm].neighbors[nn] << " ";
+        }
+        cout << endl;
+    }*/
 
     std::vector<float> vacf(maxVACFCount, 0.0);
     int vacfCount = 0;
@@ -213,10 +315,10 @@ int main() {
     std::vector<float> msd(maxMSDCount, 0.0);
     int msdCount = 0;
     int msdSamplingCount = 0;
-    for (currentTimeStep = time = drawTime = 0; currentTimeStep < NumberOfSteps; time += dt, drawTime++) {
+    for (currentTimeStep = time = drawTime = 0; currentTimeStep < NumberOfSteps; time += dt, drawTime++, currentTimeStep++) {
 
-
-/*        if (1){     
+/*
+        if (1){     
             cudaMemcpy(particles, dev_particles, N * sizeof(Particle), cudaMemcpyDeviceToHost);
 
             for (i = 0; i < N; i++){
@@ -224,7 +326,7 @@ int main() {
                 outFile_velocities << i << " " << time << " " << particles[i].GetVelocityX() << " " << particles[i].GetVelocityY() << " " << particles[i].GetVelocityZ() << endl;
                 outFile_forces << i << " " << time << " " << particles[i].GetForceX() << " " << particles[i].GetForceY() << " " << particles[i].GetForceZ() << endl;
             }
-        } */
+        }*/
 
 
         if (drawTime % vacf_writeFrame == 0 && vacfSamplingCount < vacfSamplingReps) {
@@ -304,18 +406,36 @@ int main() {
 
         }  */
 
-        // call kernels to update particle velocities and positions
-        updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt * 0.5);
-        //applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
+        // Update particle velocities (half-step)
+        updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5);
 
-        moveParticlesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt, Lx, Ly, Lz);
+        // Move particles and calculate displacements
+        moveParticlesKernel<<<numBlocks, blockSize>>>(dev_particles, N, dt, Lx, Ly, Lz, dev_maxDisplacement);
+        cudaMemcpy(&maxDisplacement, dev_maxDisplacement, sizeof(float), cudaMemcpyDeviceToHost);
 
-        // calcu forces
+        resetCells<<<numBlocks, blockSize>>>(dev_cells, totalNumCells);
+        cudaDeviceSynchronize();
+
+        // Assign particles to cells
+        assignParticlesToCells<<<numBlocks, blockSize>>>(dev_particles, dev_cells, N, cellSize, numCellsX, numCellsY, numCellsZ, Lx, Ly, Lz);
+
+        //cout << maxDisplacement << endl;
+
+        // Update the Verlet list if necessary
+        if (maxDisplacement > displacementThreshold) {
+            //cout << "-----------------------------------------------------" << endl;
+            updateVerletListKernel<<<numBlocks, blockSize>>>(dev_particles, dev_cells, N, extendedCutoff, cellSize, numCellsX, numCellsY, numCellsZ, Lx, Ly, Lz);
+            cudaMemset(dev_maxDisplacement, 0, sizeof(float)); // Reset maxDisplacement on the device
+            //maxDisplacement = 0 ;
+        }
+
+        // Calculate forces
         collider.CalculateForces(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz);
 
-        // half-step velocity update
-        updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N,  dt * 0.5);
+        // Update particle velocities (half-step)
+        updateVelocitiesKernel<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5);
         //applyLangevinThermostat<<<numBlocks, blockSize>>>(dev_particles, N, dt * 0.5, Gamma, T_desired, devStates);
+
     }
 
 

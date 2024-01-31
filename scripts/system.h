@@ -35,4 +35,11 @@ extern float Lx;
 extern float Ly;
 extern float Lz;
 
+
+extern float maxDisplacement;
+extern float extendedCutoff;
+extern float displacementProportion;
+
+extern float skin;
+
 void Readdat(void);

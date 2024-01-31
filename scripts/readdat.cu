@@ -20,7 +20,7 @@ void Readdat(void)
 
   FilePtr=fopen("input","r");
   //fscanf(FilePtr,"%lf %d %d %lf %lf %lf %d %lf %lf %lf %s\n",   
-  fscanf(FilePtr, "%f %d %d %f %f %f %d %f %f %f %s\n", 
+  fscanf(FilePtr, "%f %d %d %f %f %f %d %f %f %f %f %f %f %s\n", 
          &RHO,
          &M,
          &NumberOfSteps,
@@ -31,6 +31,9 @@ void Readdat(void)
          &defaultMass,
          &InitialVelocity,
          &cutoff,
+         &extendedCutoff,
+         &displacementProportion,
+         &skin,
          labelBuffer);
 
   simulationLabel = labelBuffer;

@@ -23,7 +23,11 @@ __global__ void calculateForcesCUDA(Particle* particles, float* partialPotential
         float posIY = particles[i].y;
         float posIZ = particles[i].z;
 
-        for (int j = 0; j < N; j++) {
+        //for (int j = 0; j < N; j++) { // Normal implementation
+        // Verlet list
+        for (int k = 0; k < particles[i].numNeighbors; k++) {
+            int j = particles[i].neighbors[k];
+
             if (i != j) {
                 float dx = posIX - particles[j].x;
                 float dy = posIY - particles[j].y;
@@ -57,24 +61,77 @@ __global__ void calculateForcesCUDA(Particle* particles, float* partialPotential
     }
 }
 
-void Collider::CalculateForces(Particle* dev_particles, float* dev_partialPotentialEnergy, int N, float Lx, float Ly, float Lz) {
-    //std::cout << "Epsilon: " << N << std::endl;
 
-    // grid and block sizes
-    int blockSize = 256; 
+/*__global__ void calculateForcesCUDA(Particle* particles, float* partialPotentialEnergy, int N, float Lx, float Ly, float Lz, float epsilon_sigma_6, float sigma_6, float cutoff) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= N) return;
+
+    extern __shared__ float3 neighborPositions[]; // Declare shared memory for neighbor positions
+
+    float potentialEnergy = 0.0f;
+    float3 force = make_float3(0.0f, 0.0f, 0.0f);
+    float3 posI = make_float3(particles[i].x, particles[i].y, particles[i].z);
+
+    int numNeighbors = particles[i].numNeighbors;
+
+    // Prefetch neighbor position into shared memory (if within bounds)
+    if (threadIdx.x < blockDim.x) {
+        for (int k = 0; k < numNeighbors; k++) {
+            if (k < blockDim.x) {
+                int neighborIdx = particles[i].neighbors[k];
+                neighborPositions[k] = make_float3(particles[neighborIdx].x, particles[neighborIdx].y, particles[neighborIdx].z);
+            }
+        }
+    }
+    __syncthreads(); // Synchronize to ensure all positions are loaded
+
+    // Verlet list - force calculation
+    for (int k = 0; k < numNeighbors; k++) {
+        float3 posJ = neighborPositions[k]; // Use the pre-fetched position from shared memory
+
+        float3 dr = make_float3(posI.x - posJ.x, posI.y - posJ.y, posI.z - posJ.z);
+
+        // Apply minimum image convention
+        dr.x -= Lx * round(dr.x / Lx);
+        dr.y -= Ly * round(dr.y / Ly);
+        dr.z -= Lz * round(dr.z / Lz);
+
+        float rsq = dr.x * dr.x + dr.y * dr.y + dr.z * dr.z;
+        if (rsq < cutoff * cutoff && rsq > 1e-12f) { // Avoid division by zero or too close encounters
+            float d1 = 1.0f / rsq;
+            float d3 = d1 * d1 * d1;
+            float forceScalar = 24.0f * epsilon_sigma_6 * d3 * d1 * ((2.0f * sigma_6 * d3) - 1.0f);
+
+            force.x += forceScalar * dr.x;
+            force.y += forceScalar * dr.y;
+            force.z += forceScalar * dr.z;
+
+            // Potential energy calculation can also be added here if needed
+        }
+    }
+
+    // Update the global memory with the calculated forces
+    particles[i].forceX = force.x;
+    particles[i].forceY = force.y;
+    particles[i].forceZ = force.z;
+    partialPotentialEnergy[i] = potentialEnergy;
+}
+*/
+
+
+void Collider::CalculateForces(Particle* dev_particles, float* dev_partialPotentialEnergy, int N, float Lx, float Ly, float Lz) {
+    int blockSize = 128; 
     int numBlocks = (N + blockSize - 1) / blockSize;
 
+/*
+    size_t sharedMemorySize = MAX_NEIGHBORS * sizeof(float3);
+    dim3 blockDim(256); 
+    dim3 gridDim((N + blockDim.x - 1) / blockDim.x); */
+
+
     // CUDA kernel launch
+    //calculateForcesCUDA<<<gridDim, blockDim, sharedMemorySize>>>(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz, epsilon_sigma_6, sigma_6, cutoff);
     calculateForcesCUDA<<<numBlocks, blockSize>>>(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz, epsilon_sigma_6, sigma_6, cutoff);
-
-    // errors
-/*    cudaError_t error = cudaGetLastError();
-    if (error != cudaSuccess) {
-        std::cerr << "CUDA error: " << cudaGetErrorString(error) << std::endl;
-    }*/
-
-    // synchronize device
-    //cudaDeviceSynchronize();
 }
 
 

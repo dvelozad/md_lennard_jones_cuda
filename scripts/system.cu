@@ -39,3 +39,8 @@ float Lx=1;
 float Ly=1;
 float Lz=1;
 
+float maxDisplacement;
+float extendedCutoff;
+float displacementProportion;
+
+float skin;
