@@ -7,19 +7,19 @@
 # TEMP     = TEMPERATURE
 # DELTAT   = TIMESTEP FOR INTEGRATION
 
-set RHO     = 1
-set MBOX    = 10
-set NSTEP   = 0
+set RHO     = 0.5
+set MBOX    = 5
+set NSTEP   = 1
 set TEMP    = 0.1
 set DAMP    = 0.5
-set DELTAT  = 0.005
-set EQSTEPS = 10000
+set DELTAT  = 0.001
+set EQSTEPS = 20000
 set MASS    = 1
 set INIVEL  = 15
 set CUTOFF  = 2.5
 set ECUTOFF = 2.5
-set DPROP   = 1.0
-set SKIN    = 0
+set DPROP   = 0.5
+set SKIN    = 6.349604
 set LABEL   = 'T1_N5_RHO1'
 
 # PRINT paramters

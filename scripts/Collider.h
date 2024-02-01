@@ -11,7 +11,8 @@ private:
 public:
     void Init(void);
     //void CalculateForces(Particle *particles);
-    void CalculateForces(Particle* dev_particles, float* dev_partialPotentialEnergy, int N, float Lx, float Ly, float Lz);
+    //void CalculateForces(Particle* dev_particles, float* dev_partialPotentialEnergy, int N, float Lx, float Ly, float Lz);
+    void CalculateForces(Particle* dev_particles, float* dev_partialPotentialEnergy, int N, float Lx, float Ly, float Lz, int totalCells, Cell* cells);
     //void Collide(Particle &particle1, Particle &particle2);
     float GetPotentialEnergy(void);
 };

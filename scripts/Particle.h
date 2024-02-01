@@ -1,5 +1,7 @@
-#define MAX_NEIGHBORS 100
-#define MAX_PARTICLES_PER_CELL 100
+#define MAX_NEIGHBORS 500
+#define MAX_PARTICLES_PER_CELL 500
+
+#define MAX_STENCIL_SIZE 100
 
 #ifndef PARTICLE_H
 #define PARTICLE_H
@@ -10,9 +12,13 @@
 
 struct Cell {
     int particleIndices[MAX_PARTICLES_PER_CELL];
-    int numParticles;
+    int numParticles = 0;
     bool overflow;
+    int3 stencil[MAX_STENCIL_SIZE]; 
+    int3 halfstencil[MAX_STENCIL_SIZE]; 
+    int stencilSize = 0;
 };
+
 
 struct Particle {
     float mass, radius;
@@ -63,9 +69,13 @@ __global__ void applyLangevinThermostat(Particle* particles, int N, float dt, fl
 __global__ void resetCells(Cell* cells, int totalNumCells);
 __global__ void assignParticlesToCells(Particle* particles, Cell* cells, int N, float cellSize, int numCellsX, int numCellsY, int numCellsZ, float Lx, float Ly, float Lz);
 __device__ int getNeighborCellIndex(int cellIndex, int dx, int dy, int dz, int numCellsX, int numCellsY, int numCellsZ);
-__global__ void updateVerletListKernel(Particle* particles, Cell* cells, int N, float cutoff, float cellSize, int numCellsX, int numCellsY, int numCellsZ, float Lx, float Ly, float Lz);
+
+
+//__global__ void updateVerletListKernel(Particle* particles, Cell* cells, int N, float cutoff, float cellSize, int numCellsX, int numCellsY, int numCellsZ, float Lx, float Ly, float Lz);
+__global__ void updateVerletListKernel(Particle* particles, Cell* cells, int N, float cutoff_, int numCellsX, int numCellsY, int numCellsZ, float Lx, float Ly, float Lz);
 
 
 
+__global__ void generateStencils(Cell* cells, int numCellsX, int numCellsY, int numCellsZ, float cellLength, float cutoff);
 
 #endif
