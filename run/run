@@ -1,25 +1,25 @@
 #! /bin/csh -f
 #
-# BOX      = BOXLENGTH
-# NPART    = NUMBER OF PARTICLES
-# NSTEP    = NUMBER OF TIMESTEPS
-# NINIT    = NUMBER OF INITIALIZATION STEPS
-# TEMP     = TEMPERATURE
-# DELTAT   = TIMESTEP FOR INTEGRATION
+# RHO       = DENSITY
+# MBOX      = BOX CONSTANT
+# NSTEP     = NUMBER OF TIMESTEPS
+# NINIT     = NUMBER OF INITIALIZATION STEPS
+# TEMP      = TEMPERATURE
+# DELTAT    = TIMESTEP FOR INTEGRATION
 
-set RHO     = 0.5
+set RHO     = 0.82
 set MBOX    = 5
-set NSTEP   = 1
-set TEMP    = 0.1
-set DAMP    = 0.5
-set DELTAT  = 0.001
-set EQSTEPS = 20000
+set NSTEP   = 500000
+set TEMP    = 0.71
+set DAMP    = 0.01
+set DELTAT  = 0.005
+set EQSTEPS = 500000
 set MASS    = 1
-set INIVEL  = 15
+set INIVEL  = 12
 set CUTOFF  = 2.5
-set ECUTOFF = 2.5
-set DPROP   = 0.5
-set SKIN    = 6.349604
+set ECUTOFF = 3.0
+set DPROP   = 0.1
+set SKIN    = 2
 set LABEL   = 'T1_N5_RHO1'
 
 # PRINT paramters
@@ -29,22 +29,19 @@ set eqVerboseFrame          = 100;
 set temperature_writeFrame  = 2000;
 
 # VACF parameters
-set vacf_writeFrame         = 1000;
-set maxVACFCount            = 10;
+set vacf_writeFrame         = 100000;
+set maxVACFCount            = 100;
 set vacfSamplingReps        = 10;
 
 # MSD parameters
-set msd_writeFrame          = 1000;
-set maxMSDCount             = 10;
+set msd_writeFrame          = 100000;
+set maxMSDCount             = 100;
 set msdSamplingReps         = 10;
 
 # RDF parameters
-set RDF_writeFrame          = 100;
-set maxDistance             = 10; 
-set numBins                 = 1000; 
-
-
-mkdir ../output_files/${LABEL}
+set RDF_writeFrame          = 50000;
+set maxDistance             = 2.5; 
+set numBins                 = 200; 
 
 cat > input << endofdata
 $RHO    $MBOX   $NSTEP  $TEMP  $DAMP  $DELTAT $EQSTEPS $MASS   $INIVEL    $CUTOFF   $ECUTOFF $DPROP $SKIN $LABEL
@@ -54,6 +51,7 @@ cat > write_input << endofdata
 $RDF_writeFrame $temperature_writeFrame $eqVerboseFrame  $vacf_writeFrame  $maxVACFCount  $vacfSamplingReps $msd_writeFrame $maxMSDCount   $msdSamplingReps    $maxDistance $numBins
 endofdata
 
+mkdir ../output_files/${LABEL}
 time ../scripts/simul.exe
 rm input
 rm write_input

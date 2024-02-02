@@ -1,3 +1,7 @@
+#define MAX_NEIGHBORS 1000
+#define MAX_PARTICLES_PER_CELL 1000
+#define MAX_STENCIL_SIZE 10000
+
 #include <cmath>
 #include <string>
 

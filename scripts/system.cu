@@ -23,21 +23,21 @@ float potentialEnergy_cutoff;
 float forceNormalCutOff;
 
 // Thermostat
-float Gamma=0.1;
-float T_desired=2;
+float Gamma;
+float T_desired;
 
 // Particles definitions
-float defaultMass=1;
-float InitialVelocity=20;
+float defaultMass;
+float InitialVelocity;
 
 // Simul box settings
 float RHO;
 int M;
 int N;
-float L =1;
-float Lx=1;
-float Ly=1;
-float Lz=1;
+float L;
+float Lx;
+float Ly;
+float Lz;
 
 float maxDisplacement;
 float extendedCutoff;

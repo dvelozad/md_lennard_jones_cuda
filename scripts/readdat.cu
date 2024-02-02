@@ -50,11 +50,8 @@ void Readdat(void)
   L = pow(defaultMass*N / RHO, 1. / 3.);
   Lx = L, Ly = L, Lz = L;
 
-  //simulationLabel = "T" + std::to_string((int)T_desired) + "_N" + std::to_string((int)M)+ "_RHO" + std::to_string((int)RHO);
-
   sigma_6 = pow(sigma, 6);
   epsilon_sigma_6 = epsilon * sigma_6;
-
   potentialEnergy_cutoff = 4 * epsilon_sigma_6 * pow(1 / cutoff, 6) * (sigma_6 * pow(1 / cutoff, 6) - 1);
   forceNormalCutOff = 24 * epsilon_sigma_6 * pow(1 / cutoff, 6) * pow(1 / cutoff, 2) * ( 2 * sigma_6 * pow(1 / cutoff, 6) - 1);
 

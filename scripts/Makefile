@@ -1,7 +1,7 @@
 CC          = nvcc
 CLINKER     = nvcc
 
-CFLAGS      = #-O3 -g 
+CFLAGS      = -O2 -g 
 LIBS        = -lm
 DEPEND= makedepend
 

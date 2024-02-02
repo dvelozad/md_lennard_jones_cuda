@@ -10,22 +10,21 @@ using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////
 __device__ void atomicMax(float* address, float val) {
-    int* address_as_i = (int*)address;
+    int* address_as_i = (int*) address;
     int old = *address_as_i, assumed;
-
     do {
         assumed = old;
-        old = atomicCAS(address_as_i, assumed,
-                        __float_as_int(fmaxf(val, __int_as_float(assumed))));
+        old = atomicCAS(address_as_i, assumed, __float_as_int(fmaxf(val, __int_as_float(assumed))));
     } while (assumed != old);
 }
+
 ////////////////////////////////////////////////////////////////////////////////////
 
 float Particle::GetMass(void) { return mass; }
 float Particle::GetX(void) { return x; }
 float Particle::GetY(void) { return y; }
 float Particle::GetZ(void) { return z; }
-float Particle::GetKineticEnergy(void) { return 0.5*mass * (velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ); }
+float Particle::GetKineticEnergy(void) { return 0.5 * mass * (velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ); }
 float Particle::GetVelocity(void) { return sqrt(velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ); }
 float Particle::GetVelocityX(void) { return velocityX; }
 float Particle::GetVelocityY(void) { return velocityY; }
@@ -39,6 +38,10 @@ __host__ void Particle::Init(float x0, float y0, float z0, float velocityX0, flo
     x = x0; y = y0; z = z0;
     velocityX = velocityX0; velocityY = velocityY0; velocityZ = velocityZ0;
     mass = mass0; radius = radius0;
+
+    lastX = x0;
+    lastY = y0;
+    lastZ = z0;  
 
     for(int n = 0; n < MAX_NEIGHBORS; n++){
         neighbors[n] = 0;

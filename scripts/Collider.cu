@@ -11,7 +11,7 @@ void Collider::Init(void) {
     potentialEnergy = 0;
 }
 
-__global__ void calculateForcesCUDA(Particle* particles, float* partialPotentialEnergy, int N, float Lx, float Ly, float Lz, float epsilon_sigma_6, float sigma_6, float cutoff) {
+__global__ void calculateForcesCUDA(Particle* particles, float* partialPotentialEnergy, int N, float Lx, float Ly, float Lz, float epsilon_sigma_6, float sigma_6,  float forceNormalCutOff, float cutoff) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < N) {
         float potentialEnergy = 0;
@@ -23,7 +23,7 @@ __global__ void calculateForcesCUDA(Particle* particles, float* partialPotential
         for (int k = 0; k < particles[i].numNeighbors; k++) {
             int j = particles[i].neighbors[k];
 
-            if(i != j){
+            //if(i > j){
 
             Particle* pj = &particles[j];
 
@@ -40,7 +40,7 @@ __global__ void calculateForcesCUDA(Particle* particles, float* partialPotential
             if (rsq < cutoff * cutoff) {
                 float d1 = 1.0 / rsq;
                 float d3 = d1 * d1 * d1;
-                float forceNormal = 24 * epsilon_sigma_6 * d3 * d1 * ( (2 * sigma_6 * d3) - 1);// - forceNormalCutOff_d * (cutoff / sqrt(rsq));
+                float forceNormal = 24 * epsilon_sigma_6 * d3 * d1 * ( (2 * sigma_6 * d3) - 1) - forceNormalCutOff * (cutoff / sqrt(rsq));
 
                 atomicAdd(&(pi->forceX), forceNormal * dx);
                 atomicAdd(&(pi->forceY), forceNormal * dy);
@@ -52,14 +52,12 @@ __global__ void calculateForcesCUDA(Particle* particles, float* partialPotential
 
                 //float r = sqrt(rsq);
                 //potentialEnergy += 4 * epsilon_sigma_6 * d3 * ( (sigma_6 * d3) - 1) - potentialEnergy_cutoff + forceCutoff * (r - cutoff);
-            }
+            //}
 
             }
         }
     }
 }
-
-
 
 __global__ void resetForces(Particle* particles, int N) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -74,10 +72,9 @@ void Collider::CalculateForces(Particle* dev_particles, float* dev_partialPotent
     int blockSize = 128; 
     int numBlocks = (N + blockSize - 1) / blockSize;
 
-    
     resetForces<<<numBlocks, blockSize>>>(dev_particles, N);
-    //calculateCellForcesCUDA<<<numBlocks, blockSize>>>(dev_particles, dev_cells, totalCells, Lx, Ly, Lz, epsilon_sigma_6, sigma_6, cutoff);
-    calculateForcesCUDA<<<numBlocks, blockSize>>>(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz, epsilon_sigma_6, sigma_6, cutoff);
+    cudaDeviceSynchronize();
+    calculateForcesCUDA<<<numBlocks, blockSize>>>(dev_particles, dev_partialPotentialEnergy, N, Lx, Ly, Lz, epsilon_sigma_6, sigma_6, forceNormalCutOff, cutoff);
 }
 
 /*__global__ void calculateForcesCUDA(Particle* particles, float* partialPotentialEnergy, int N, float Lx, float Ly, float Lz, float epsilon_sigma_6, float sigma_6, float cutoff) {

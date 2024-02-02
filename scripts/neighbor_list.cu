@@ -73,9 +73,17 @@ __global__ void assignParticlesToCells(Particle* particles, Cell* cells, int N, 
 __global__ void updateVerletListKernel(Particle* particles, Cell* cells, int N, float cutoff_, int numCellsX, int numCellsY, int numCellsZ, float Lx, float Ly, float Lz) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < N) {
+        // Select particle i
         Particle* pi = &particles[i];
+
+        // Reset num of neighbors
         pi->numNeighbors = 0;
-       
+
+        // Reset last pos
+        pi->lastX = pi->x;
+        pi->lastY = pi->y;
+        pi->lastZ = pi->z;  
+        
         // Get the index of the cell where particle i is located
         int cellIndex = pi->cellIndex;
 
@@ -83,16 +91,19 @@ __global__ void updateVerletListKernel(Particle* particles, Cell* cells, int N, 
         Cell* cell = &cells[cellIndex];
 
         // Loop over the stencil of the cell for neighboring cell offsets
-        for (int n = 0; n < 1; n++) {
+        for (int n = 0; n < cell -> stencilSize; n++) {
+        //for (int n = 0; n < 1; n++) {
             int3 offset = cell -> halfstencil[n];
-            int neighborCellIndex = getNeighborCellIndex(cellIndex, 0,0,0, numCellsX, numCellsY, numCellsZ);
+            int neighborCellIndex = getNeighborCellIndex(cellIndex, offset.x, offset.y, offset.z, numCellsX, numCellsY, numCellsZ);
 
             // Loop over particles in neighboring cell
             for (int j = 0; j < cells[neighborCellIndex].numParticles; j++) {
             //    for (int j = 0; j < MAX_PARTICLES_PER_CELL; j++) {
                 int neighborIndex = cells[neighborCellIndex].particleIndices[j];
                 // Avoid double counting: only consider particles in neighboring cells
-                if (neighborIndex > i) {
+                //if (neighborIndex != i) {
+                if (i > neighborIndex) {
+            
                     float dx_ = pi->x - particles[neighborIndex].x;
                     float dy_ = pi->y - particles[neighborIndex].y;
                     float dz_ = pi->z - particles[neighborIndex].z;
@@ -121,11 +132,6 @@ __global__ void generateStencils(Cell* cells, int numCellsX, int numCellsY, int 
 
     if (cellIndex >= totalCells) return;
 
-    // Calculate the cell's 3D index
-    int cellZ = cellIndex / (numCellsX * numCellsY);
-    int cellY = (cellIndex / numCellsX) % numCellsY;
-    int cellX = cellIndex % numCellsX;
-
     Cell* cell = &cells[cellIndex];
     cell->stencilSize = 0; // Initialize stencil size
 
@@ -139,11 +145,8 @@ __global__ void generateStencils(Cell* cells, int numCellsX, int numCellsY, int 
         for (int dy = -maxDy; dy <= maxDy; dy++) {
             for (int dz = -maxDz; dz <= maxDz; dz++) {
                 // Skip the center cell to only consider the surrounding cells
-                if (dx == 0 && dy == 0 && dz == 0) continue;
+                //if (dx == 0 && dy == 0 && dz == 0) continue;
 
-                // Check if the cell at (dx, dy, dz) is within the cutoff sphere
-                float distance = dx * dx + dy * dy + dz * dz * cellLength * cellLength;
-                if (distance <= cutoff * cutoff) {
                     // If within the cutoff, add the cell offset to the stencil
                     if (cell->stencilSize < MAX_STENCIL_SIZE) {
                         cell->stencil[cell->stencilSize++] = make_int3(dx, dy, dz);
@@ -151,7 +154,6 @@ __global__ void generateStencils(Cell* cells, int numCellsX, int numCellsY, int 
                 }
             }
         }
-    }
 
     // Now that we have a full stencil, let's reduce it to a half stencil
     // by only including neighbor cells in the positive direction.

@@ -1,5 +1,4 @@
 #include "Particle.h"
-
 #include <string>
 #include <fstream>
 

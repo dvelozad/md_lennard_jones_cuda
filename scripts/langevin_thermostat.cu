@@ -22,7 +22,7 @@ float CalculateCurrentTemperature(Particle *particles, int numParticles) {
     return temperature;
 }
 
-__global__ void applyLangevinThermostat(Particle* particles, int N, float dt, float gamma, float temperature, curandState* states) {
+__global__ void applyLangevinThermostat(Particle* particles, int N, float dt, float kB, float gamma, float temperature, curandState* states) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < N) {
         // Generate a normally distributed random number
@@ -31,7 +31,7 @@ __global__ void applyLangevinThermostat(Particle* particles, int N, float dt, fl
         float randZ = curand_normal_double(&states[idx]);
 
         // Calculate the random force magnitude
-        float randomForceMagnitude = sqrt(2.0 * particles[idx].mass * kB_d * temperature * gamma * dt);
+        float randomForceMagnitude = sqrt(2.0 * particles[idx].mass * kB * temperature * gamma * dt);
 
         // Update velocity
         particles[idx].velocityX += (particles[idx].forceX / particles[idx].mass - gamma * particles[idx].velocityX) * dt 
